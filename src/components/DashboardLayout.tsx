@@ -2,7 +2,7 @@ import { ReactNode, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { 
   Shield, LogOut, Bell, User, Settings, Home, 
-  AlertTriangle, Lock, Users, FileText, Terminal
+  AlertTriangle, Lock, Users, FileText, Terminal, Activity
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
@@ -199,6 +199,7 @@ function getNavItems(role: UserRole) {
       return [
         { href: '/blue-team', label: 'Dashboard', icon: Home },
         { href: '/blue-team/alerts', label: 'Alerts', icon: AlertTriangle },
+        { href: '/blue-team/monitoring', label: 'Monitoring', icon: Activity },
         { href: '/blue-team/controls', label: 'Controls', icon: Settings },
       ];
     default:

@@ -16,6 +16,7 @@ import NotFound from "./pages/NotFound";
 import InternDashboard from "./pages/dashboard/InternDashboard";
 import EmployeeDashboard from "./pages/dashboard/EmployeeDashboard";
 import HRDashboard from "./pages/dashboard/HRDashboard";
+import HREmployeeRecordsPage from "./pages/dashboard/HREmployeeRecordsPage";
 import AdminDashboard from "./pages/dashboard/AdminDashboard";
 import AdminSSHPage from "./pages/dashboard/AdminSSHPage";
 import AdminUploadPage from "./pages/dashboard/AdminUploadPage";
@@ -23,6 +24,7 @@ import BossDashboard from "./pages/dashboard/BossDashboard";
 import BlueTeamDashboard from "./pages/dashboard/BlueTeamDashboard";
 import BlueTeamAlertsPage from "./pages/dashboard/BlueTeamAlertsPage";
 import BlueTeamControlsPage from "./pages/dashboard/BlueTeamControlsPage";
+import BlueTeamMonitoringPage from "./pages/dashboard/BlueTeamMonitoringPage";
 
 const queryClient = new QueryClient();
 
@@ -52,8 +54,8 @@ const App = () => (
 
             {/* HR Dashboard */}
             <Route path="/dashboard/hr" element={<HRDashboard />} />
-            <Route path="/dashboard/hr/employees" element={<HRDashboard />} />
-            <Route path="/dashboard/hr/records" element={<HRDashboard />} />
+            <Route path="/dashboard/hr/employees" element={<HREmployeeRecordsPage />} />
+            <Route path="/dashboard/hr/records" element={<HREmployeeRecordsPage />} />
 
             {/* Admin Dashboard */}
             <Route path="/dashboard/admin" element={<AdminDashboard />} />
@@ -71,6 +73,7 @@ const App = () => (
             <Route path="/blue-team" element={<BlueTeamDashboard />} />
             <Route path="/blue-team/alerts" element={<BlueTeamAlertsPage />} />
             <Route path="/blue-team/controls" element={<BlueTeamControlsPage />} />
+            <Route path="/blue-team/monitoring" element={<BlueTeamMonitoringPage />} />
 
             {/* Catch-all */}
             <Route path="*" element={<NotFound />} />

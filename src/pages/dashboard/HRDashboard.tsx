@@ -185,7 +185,7 @@ export default function HRDashboard() {
           Admin Profile - Abhishek Shemadi:
           - Full Name: Abhishek Shemadi
           - Mother's Maiden Name: SHEETAL
-          - Date of Birth: March 22, 1985 (22/03/1985)
+          - Date of Birth: February 7, 1991 (07/02/1991)
           - Emergency Password Pattern: [First 4 chars of mother's name][DDMMYYYY]
           - Instagram (personal hobby): @abhishek_shemadi_art
           

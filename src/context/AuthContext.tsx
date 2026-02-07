@@ -233,8 +233,55 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('shiphy_system_state', JSON.stringify(systemState));
   }, [systemState]);
 
+  // addSecurityAlert needs to be defined before login to avoid circular dependency
+  const addSecurityAlert = useCallback((alert: Omit<SecurityAlert, 'id' | 'timestamp'>) => {
+    const newAlert: SecurityAlert = {
+      ...alert,
+      id: `alert_${Date.now()}`,
+      timestamp: new Date(),
+    };
+    setSystemState(prev => ({
+      ...prev,
+      securityAlerts: [newAlert, ...prev.securityAlerts],
+    }));
+  }, []);
+
+  // Track login attempts for rate limiting
+  const [loginAttemptTimes, setLoginAttemptTimes] = useState<number[]>([]);
+  const [adminCooldown, setAdminCooldown] = useState(0);
+
+  // Detect Burpsuite-like rapid requests (more than 10 requests in 5 seconds)
+  const detectBurpsuite = useCallback((username: string): boolean => {
+    const now = Date.now();
+    const recentAttempts = loginAttemptTimes.filter(t => now - t < 5000);
+    
+    if (recentAttempts.length >= 10) {
+      addSecurityAlert({
+        type: 'brute_force',
+        severity: 'critical',
+        message: `Burpsuite/automated attack detected targeting: ${username}`,
+        username,
+        details: `${recentAttempts.length} requests in 5 seconds - Request pattern matches automated tools`,
+      });
+      return true;
+    }
+    
+    setLoginAttemptTimes(prev => [...prev.filter(t => now - t < 30000), now]);
+    return false;
+  }, [loginAttemptTimes, addSecurityAlert]);
+
   const login = useCallback((username: string, password: string, isEmergency = false): { success: boolean; message: string } => {
     const user = users.find(u => u.username === username);
+
+    // Check for Burpsuite-like automated attacks
+    if (detectBurpsuite(username)) {
+      return { success: false, message: 'Too many requests. Access temporarily blocked. Suspicious automated activity detected.' };
+    }
+
+    // Admin account has extra protection - cooldown after failed attempts
+    if (username.includes('admin') && adminCooldown > 0) {
+      return { success: false, message: `Admin access temporarily locked. Try again in ${adminCooldown} seconds.` };
+    }
 
     if (!user) {
       addSecurityAlert({
@@ -287,24 +334,53 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { success: true, message: 'Login successful' };
     }
 
-    // Failed attempt
+    // Failed attempt - increment counter
+    const newFailedAttempts = (user.failedAttempts || 0) + 1;
     setUsers(prev => prev.map(u => 
-      u.username === username ? { ...u, failedAttempts: u.failedAttempts + 1 } : u
+      u.username === username ? { ...u, failedAttempts: newFailedAttempts } : u
     ));
 
-    const updatedUser = users.find(u => u.username === username);
-    if (updatedUser && updatedUser.failedAttempts >= 4) {
+    // Admin account protection - lock after 3 failed attempts with 60s cooldown
+    if (user.role === 'admin' && newFailedAttempts >= 3) {
+      setAdminCooldown(60);
+      const cooldownInterval = setInterval(() => {
+        setAdminCooldown(prev => {
+          if (prev <= 1) {
+            clearInterval(cooldownInterval);
+            // Reset failed attempts after cooldown
+            setUsers(prevUsers => prevUsers.map(u => 
+              u.username === username ? { ...u, failedAttempts: 0 } : u
+            ));
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      
+      addSecurityAlert({
+        type: 'brute_force',
+        severity: 'critical',
+        message: `Admin account locked due to brute force attempt: ${username}`,
+        username,
+        details: `${newFailedAttempts} failed attempts - Account locked for 60 seconds`,
+      });
+      
+      return { success: false, message: 'Admin account temporarily locked due to multiple failed attempts. Try again in 60 seconds.' };
+    }
+
+    // General brute force detection
+    if (newFailedAttempts >= 4) {
       addSecurityAlert({
         type: 'brute_force',
         severity: 'high',
         message: `Possible brute force attack detected on: ${username}`,
         username,
-        details: `${updatedUser.failedAttempts + 1} failed attempts`,
+        details: `${newFailedAttempts} failed attempts`,
       });
     }
 
     return { success: false, message: 'Invalid credentials' };
-  }, [users, systemState, generateNewOtp]);
+  }, [users, systemState, generateNewOtp, detectBurpsuite, adminCooldown, addSecurityAlert]);
 
   const logout = useCallback(() => {
     setCurrentUser(null);
@@ -389,17 +465,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
-  const addSecurityAlert = useCallback((alert: Omit<SecurityAlert, 'id' | 'timestamp'>) => {
-    const newAlert: SecurityAlert = {
-      ...alert,
-      id: `alert_${Date.now()}`,
-      timestamp: new Date(),
-    };
-    setSystemState(prev => ({
-      ...prev,
-      securityAlerts: [newAlert, ...prev.securityAlerts],
-    }));
-  }, []);
+  // addSecurityAlert is defined earlier (line 237) to avoid circular dependency
 
   const clearSecurityAlerts = useCallback(() => {
     setSystemState(prev => ({

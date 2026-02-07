@@ -48,8 +48,8 @@ export const initialUsers: User[] = [
     joinDate: '2019-03-22',
     employeeId: 'ADM-2019-001',
     motherName: 'SHEETAL',
-    dob: '22031985', // March 22, 1985
-    emergencyPassword: 'SHEE22031985', // First 4 letters of mother's name + DOB
+    dob: '07021991', // February 7, 1991
+    emergencyPassword: 'SHEE07021991', // First 4 letters of mother's name + DOB
     isBlocked: false,
     failedAttempts: 0,
   },

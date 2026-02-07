@@ -1,6 +1,6 @@
 import { 
   Users, Shield, Terminal, Settings, Lock, 
-  AlertTriangle, Server, Activity, Key
+  AlertTriangle, Server, Activity, Key, Upload
 } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useAuth } from '@/context/AuthContext';
@@ -146,6 +146,23 @@ export default function AdminDashboard() {
                   Secure shell access to production servers
                 </p>
                 <Button variant="outline" className="w-full">Open Terminal</Button>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link to="/dashboard/admin/upload">
+            <Card className="hover:border-primary/50 transition-colors cursor-pointer h-full">
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Upload className="h-5 w-5 text-primary" />
+                  Secure Upload
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Upload FTE candidate documents (requires authorization)
+                </p>
+                <Button variant="outline" className="w-full">Open Upload</Button>
               </CardContent>
             </Card>
           </Link>

@@ -18,6 +18,7 @@ import EmployeeDashboard from "./pages/dashboard/EmployeeDashboard";
 import HRDashboard from "./pages/dashboard/HRDashboard";
 import AdminDashboard from "./pages/dashboard/AdminDashboard";
 import AdminSSHPage from "./pages/dashboard/AdminSSHPage";
+import AdminUploadPage from "./pages/dashboard/AdminUploadPage";
 import BossDashboard from "./pages/dashboard/BossDashboard";
 import BlueTeamDashboard from "./pages/dashboard/BlueTeamDashboard";
 import BlueTeamAlertsPage from "./pages/dashboard/BlueTeamAlertsPage";
@@ -59,6 +60,7 @@ const App = () => (
             <Route path="/dashboard/admin/users" element={<AdminDashboard />} />
             <Route path="/dashboard/admin/security" element={<AdminDashboard />} />
             <Route path="/dashboard/admin/ssh" element={<AdminSSHPage />} />
+            <Route path="/dashboard/admin/upload" element={<AdminUploadPage />} />
 
             {/* Boss Dashboard */}
             <Route path="/dashboard/boss" element={<BossDashboard />} />

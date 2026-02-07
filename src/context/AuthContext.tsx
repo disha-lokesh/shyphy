@@ -21,6 +21,7 @@ interface AuthContextType {
   updateSecurityLevel: (level: 'normal' | 'elevated' | 'lockdown') => void;
   verifyOtp: (otp: string) => boolean;
   currentOtp: string;
+  otpSeed: number;
   otpAttempts: number;
   maxOtpAttempts: number;
   setMaxOtpAttempts: (attempts: number) => void;
@@ -28,6 +29,13 @@ interface AuthContextType {
   generateNewOtp: () => void;
   hrVerified: boolean;
   setHrVerified: (verified: boolean) => void;
+  // Upload system
+  uploadUnlocked: boolean;
+  uploadWindowExpiry: number | null;
+  uploadAttempted: boolean;
+  verifyCtfFlag: (flag: string) => boolean;
+  completeUpload: (file: File) => { success: boolean; message: string };
+  resetUploadSystem: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -56,20 +64,126 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
 
   const [currentOtp, setCurrentOtp] = useState<string>('');
+  const [otpSeed, setOtpSeed] = useState<number>(0);
   const [otpAttempts, setOtpAttempts] = useState(0);
-  const [maxOtpAttempts, setMaxOtpAttempts] = useState(3); // Can be modified via source code
+  const [maxOtpAttempts, setMaxOtpAttempts] = useState(1); // Default to 1 - can be modified via console
   const [otpCooldown, setOtpCooldown] = useState(0);
   const [hrVerified, setHrVerified] = useState(false);
 
-  // Generate OTP
+  // CTF Upload System State
+  const [uploadUnlocked, setUploadUnlocked] = useState(false);
+  const [uploadWindowExpiry, setUploadWindowExpiry] = useState<number | null>(null);
+  const [ctfFlag, setCtfFlag] = useState<string>('');
+  const [uploadAttempted, setUploadAttempted] = useState(false);
+
+  // Deterministic OTP Formula - CTF Challenge
+  // The formula: seed * 7 + 13 * (seed % 100) + 42, then mod 900000 + 100000
+  const calculateOtpFromSeed = useCallback((seed: number): string => {
+    // Formula exposed in console for reverse engineering
+    const result = ((seed * 7) + (13 * (seed % 100)) + 42) % 900000 + 100000;
+    return result.toString().slice(0, 6);
+  }, []);
+
+  // Generate OTP with deterministic formula
   const generateNewOtp = useCallback(() => {
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const seed = Math.floor(Date.now() / 1000); // Seed based on current timestamp (seconds)
+    setOtpSeed(seed);
+    const otp = calculateOtpFromSeed(seed);
     setCurrentOtp(otp);
     setOtpAttempts(0);
-    console.log(`[SHIPHY 2FA] New OTP generated for verification`);
-    // Intentionally log OTP in a hidden way for CTF
-    console.log(`%c`, 'background: transparent; color: transparent;', `OTP: ${otp}`);
+    
+    // CTF Hints in console
+    console.log(`[SHIPHY 2FA] Secure OTP generated using proprietary algorithm`);
+    console.log(`[SHIPHY 2FA] Seed: ${seed}`);
+    console.log(`[SHIPHY DEBUG] Formula loaded from: /secure/otp-algo.js`);
+    
+    // "Hidden" formula hint - visible if you look closely
+    console.log(`%c[DEV] OTP Formula: seed*7 + 13*(seed%100) + 42 mod 900000 + 100000`, 'color: #333; font-size: 10px;');
+  }, [calculateOtpFromSeed]);
+
+  // Generate CTF flag
+  const generateCtfFlag = useCallback(() => {
+    const flagBase = 'SHIPHY{upld_';
+    const timestamp = Math.floor(Date.now() / 10000); // Changes every 10 seconds
+    const hash = ((timestamp * 31337) % 9999).toString().padStart(4, '0');
+    const flag = `${flagBase}${hash}}`;
+    setCtfFlag(flag);
+    console.log(`[CTF] Challenge flag refreshed. Complete the challenges to obtain.`);
+    return flag;
   }, []);
+
+  // Verify CTF flag and unlock upload
+  const verifyCtfFlag = useCallback((submittedFlag: string): boolean => {
+    const currentFlag = ctfFlag || generateCtfFlag();
+    
+    if (submittedFlag === currentFlag) {
+      setUploadUnlocked(true);
+      const expiry = Date.now() + 10000; // 10 second window
+      setUploadWindowExpiry(expiry);
+      setUploadAttempted(false);
+      
+      console.log(`[CTF] Flag verified! Upload window open for 10 seconds.`);
+      
+      // Auto-close after 10 seconds
+      setTimeout(() => {
+        setUploadUnlocked(false);
+        setUploadWindowExpiry(null);
+        generateCtfFlag(); // Reset flag
+        console.log(`[CTF] Upload window expired. Flag invalidated.`);
+      }, 10000);
+      
+      return true;
+    }
+    
+    return false;
+  }, [ctfFlag, generateCtfFlag]);
+
+  // Complete upload (single use)
+  const completeUpload = useCallback((file: File): { success: boolean; message: string } => {
+    if (!uploadUnlocked) {
+      return { success: false, message: 'Upload is disabled. Complete CTF challenges first.' };
+    }
+    
+    if (uploadAttempted) {
+      return { success: false, message: 'Upload already attempted. Window closed.' };
+    }
+    
+    if (Date.now() > (uploadWindowExpiry || 0)) {
+      setUploadUnlocked(false);
+      return { success: false, message: 'Upload window expired.' };
+    }
+    
+    // Validate file
+    if (file.type !== 'application/pdf') {
+      return { success: false, message: 'Invalid file type. Only PDF accepted.' };
+    }
+    
+    if (!file.name.match(/^FTE_Candidates_\d{4}\.pdf$/)) {
+      return { success: false, message: 'Invalid filename. Expected format: FTE_Candidates_YYYY.pdf' };
+    }
+    
+    setUploadAttempted(true);
+    setUploadUnlocked(false);
+    setUploadWindowExpiry(null);
+    
+    // Add success announcement
+    addAnnouncement({
+      title: 'FTE Candidate List Updated',
+      message: 'The Full-Time Employment candidate list has been updated by the administrator.',
+      type: 'fte',
+    });
+    
+    return { success: true, message: 'File uploaded successfully! FTE list updated.' };
+  }, [uploadUnlocked, uploadAttempted, uploadWindowExpiry]);
+
+  // Reset upload system (for Blue Team)
+  const resetUploadSystem = useCallback(() => {
+    setUploadUnlocked(false);
+    setUploadWindowExpiry(null);
+    setUploadAttempted(false);
+    generateCtfFlag();
+    console.log(`[SYSTEM] Upload system reset by Blue Team.`);
+  }, [generateCtfFlag]);
 
   // Verify OTP
   const verifyOtp = useCallback((otp: string): boolean => {
@@ -321,6 +435,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         updateSecurityLevel,
         verifyOtp,
         currentOtp,
+        otpSeed,
         otpAttempts,
         maxOtpAttempts,
         setMaxOtpAttempts,
@@ -328,6 +443,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         generateNewOtp,
         hrVerified,
         setHrVerified,
+        // Upload system
+        uploadUnlocked,
+        uploadWindowExpiry,
+        uploadAttempted,
+        verifyCtfFlag,
+        completeUpload,
+        resetUploadSystem,
       }}
     >
       {children}

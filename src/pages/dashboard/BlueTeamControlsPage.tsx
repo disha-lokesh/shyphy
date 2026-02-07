@@ -1,6 +1,6 @@
 import { 
   Settings, Shield, Lock, Users, Bell, 
-  Server, Database, Terminal, Key
+  Server, Database, Terminal, Key, Upload, RefreshCw
 } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useAuth } from '@/context/AuthContext';
@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
+import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 
 export default function BlueTeamControlsPage() {
@@ -20,6 +21,9 @@ export default function BlueTeamControlsPage() {
     updateSecurityLevel,
     maxOtpAttempts,
     setMaxOtpAttempts,
+    uploadUnlocked,
+    uploadAttempted,
+    resetUploadSystem,
   } = useAuth();
 
   if (!currentUser) return null;
@@ -120,7 +124,7 @@ export default function BlueTeamControlsPage() {
                   className="w-full"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Note: This can also be modified via browser console (shiphy_2fa_config)
+                  Note: Default is 1. Attackers can modify via browser console (shiphy_2fa_config)
                 </p>
               </div>
 
@@ -131,6 +135,49 @@ export default function BlueTeamControlsPage() {
                 </div>
                 <span className="font-mono text-sm">30s</span>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Upload System Control */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Upload className="h-5 w-5 text-primary" />
+                Upload System
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Upload Status</Label>
+                  <p className="text-xs text-muted-foreground">CTF-based unlock required</p>
+                </div>
+                <Badge variant={uploadUnlocked ? 'default' : 'secondary'}>
+                  {uploadUnlocked ? 'UNLOCKED' : 'LOCKED'}
+                </Badge>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Upload Attempted</Label>
+                  <p className="text-xs text-muted-foreground">One attempt per authorization</p>
+                </div>
+                <Badge variant={uploadAttempted ? 'destructive' : 'outline'}>
+                  {uploadAttempted ? 'USED' : 'AVAILABLE'}
+                </Badge>
+              </div>
+
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={() => {
+                  resetUploadSystem();
+                  toast.success('Upload system reset. New flag generated.');
+                }}
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Reset Upload System
+              </Button>
             </CardContent>
           </Card>
 
@@ -185,8 +232,16 @@ export default function BlueTeamControlsPage() {
                   <p className="text-accent">/api/debug/users</p>
                 </div>
                 <div className="p-2 rounded bg-secondary/50">
-                  <p className="text-muted-foreground">2FA Bypass:</p>
-                  <p className="text-accent">window.shiphy_2fa_config.setMaxAttempts(100)</p>
+                  <p className="text-muted-foreground">2FA Bypass (seed-based):</p>
+                  <p className="text-accent">shiphy_2fa_config.calculateOtp(shiphy_2fa_config.currentSeed)</p>
+                </div>
+                <div className="p-2 rounded bg-secondary/50">
+                  <p className="text-muted-foreground">2FA Attempts Override:</p>
+                  <p className="text-accent">shiphy_2fa_config.setMaxAttempts(100)</p>
+                </div>
+                <div className="p-2 rounded bg-secondary/50">
+                  <p className="text-muted-foreground">Upload Flag Formula:</p>
+                  <p className="text-accent">SHIPHY{'{upld_XXXX}'} where XXXX = ((timestamp/10000)*31337)%9999</p>
                 </div>
                 <div className="p-2 rounded bg-secondary/50">
                   <p className="text-muted-foreground">HTML Comment Clues:</p>

@@ -12,7 +12,7 @@ interface OtpVerificationProps {
 
 export default function OtpVerification({ onSuccess, onBack }: OtpVerificationProps) {
   const [otp, setOtp] = useState('');
-  const { verifyOtp, otpAttempts, maxOtpAttempts, otpCooldown, generateNewOtp, setMaxOtpAttempts } = useAuth();
+  const { verifyOtp, otpAttempts, maxOtpAttempts, otpCooldown, generateNewOtp, setMaxOtpAttempts, otpSeed } = useAuth();
 
   // Expose function to window for CTF - can be modified via console
   useEffect(() => {
@@ -20,11 +20,20 @@ export default function OtpVerification({ onSuccess, onBack }: OtpVerificationPr
     window.shiphy_2fa_config = {
       maxAttempts: maxOtpAttempts,
       setMaxAttempts: setMaxOtpAttempts,
-      // Hint: increase maxAttempts to get more tries
+      currentSeed: otpSeed,
+      // CTF Hint: Reverse engineer the formula to calculate OTP
+      calculateOtp: (seed: number) => {
+        // This is the formula - attackers can use this!
+        const result = ((seed * 7) + (13 * (seed % 100)) + 42) % 900000 + 100000;
+        return result.toString().slice(0, 6);
+      },
+      // Hint: use calculateOtp(currentSeed) to get the OTP
     };
     
     console.log('[SHIPHY] 2FA Config loaded. Type shiphy_2fa_config in console for options.');
-  }, [maxOtpAttempts, setMaxOtpAttempts]);
+    console.log('[SHIPHY] Current seed:', otpSeed);
+    console.log('[SHIPHY] Default attempts: 1 (modify with shiphy_2fa_config.setMaxAttempts)');
+  }, [maxOtpAttempts, setMaxOtpAttempts, otpSeed]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -118,12 +127,22 @@ export default function OtpVerification({ onSuccess, onBack }: OtpVerificationPr
           {/* Debug hint in source */}
           {/* 
             ================================================
-            2FA BYPASS HINT:
+            2FA BYPASS METHODS:
+            
+            METHOD 1: Brute Force (need more attempts)
             Open browser console and type:
             shiphy_2fa_config.setMaxAttempts(100)
             This will give you more attempts to guess the OTP
             
-            Alternative: Check network tab for OTP in response
+            METHOD 2: Reverse Engineering (recommended)
+            The OTP is generated using a deterministic formula:
+            OTP = ((seed * 7) + (13 * (seed % 100)) + 42) % 900000 + 100000
+            
+            Get current seed: shiphy_2fa_config.currentSeed
+            Calculate OTP: shiphy_2fa_config.calculateOtp(seed)
+            
+            Example:
+            shiphy_2fa_config.calculateOtp(shiphy_2fa_config.currentSeed)
             ================================================
           */}
         </div>
